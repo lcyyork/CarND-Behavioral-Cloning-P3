@@ -191,7 +191,7 @@ def generator(data, data_indices, batch_size, train_mode=True):
 
             if train_mode:
                 if np.random.rand() < 0.5:
-                    image, steering_angle = augment_image(data, i)
+                    image, steering_angle = augment_image(data, i, camera_corr=(0.20, 0.22))
                     append_image_angle(image, steering_angle)
                 else:
                     default_append(i)
@@ -213,13 +213,13 @@ def generator(data, data_indices, batch_size, train_mode=True):
                 #         append_image_angle(image, steering_angle)
                 #     else:
                 #         default_append(i)
-                count += 1
+                # count += 1
             else:
                 default_append(i)
-                count += 1
+                # count += 1
 
-            if count == batch_size:
-                break
+            # if count == batch_size:
+            #     break
 
         X = np.array(images)
         y = np.array(steering_angles)
