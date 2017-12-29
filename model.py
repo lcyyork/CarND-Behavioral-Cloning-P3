@@ -16,9 +16,11 @@ def model_NVIDIA( image_shape=(160,320,3), crop_row=(80,25), drop_prob=0.5 ):
     Return: the model from Keras
     """
 
-    nrow, ncol, nch = image_shape
-    feed_width, feed_height = 200, 66
-    input_shape = (feed_height, feed_width, nch)
+    # nrow, ncol, nch = image_shape
+    # feed_width, feed_height = 200, 66
+    # input_shape = (feed_height, feed_width, nch)
+
+    input_shape = image_shape
 
     model = Sequential()
 
