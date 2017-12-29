@@ -32,7 +32,7 @@ def model_NVIDIA( image_shape=(160,320,3), crop_row=(80,25), drop_prob=0.5 ):
     # model.add(Lambda(resize_lambda))
 
     # lambda layer for normalization
-    # model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=input_shape))
+    model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=input_shape))
 
     # change color space to HSV
     # def color_lambda(x):
@@ -115,7 +115,7 @@ data = mask_small_steering(data)
 nentries = len(data['steering'])
 train_indices, valid_indices = train_test_split(range(nentries), test_size=0.2)
 
-model = model_NVIDIA()
+model = model_NVIDIA(image_shape=(55,320,3))
 history = train_model(model, data, train_indices, valid_indices, epochs=3,
                       batch_size=16, batches_per_epoch=800, validation_steps=500)
 # model.save_weights('model.h5')
