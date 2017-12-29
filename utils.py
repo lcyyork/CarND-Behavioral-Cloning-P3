@@ -174,8 +174,8 @@ def generator(data, data_indices, batch_size, train_mode=True):
     steering_angles = []
 
     def append_image_angle(image, angle):
-        # images.append(gaussian_blur(image))
-        image = crop_row(image)
+        image = gaussian_blur(image)
+        # image = crop_row(image)
         # image = resize_image(image)
         image = RGB2YUV(image)
         images.append(image)

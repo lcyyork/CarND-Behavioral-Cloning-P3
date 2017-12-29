@@ -1,6 +1,6 @@
 from keras.models import Sequential
 from keras.optimizers import Adam
-from keras.layers import Lambda, Cropping2D, Conv2D, Dropout, Dense, Flatten
+from keras.layers import Lambda, Cropping2D, Reshape, Conv2D, Dropout, Dense, Flatten
 from keras.utils import plot_model
 from sklearn.model_selection import train_test_split
 
@@ -16,16 +16,17 @@ def model_NVIDIA( image_shape=(160,320,3), crop_row=(80,25), drop_prob=0.5 ):
     Return: the model from Keras
     """
 
-    # nrow, ncol, nch = image_shape
-    # feed_width, feed_height = 200, 66
-    # input_shape = (feed_height, feed_width, nch)
+    nrow, ncol, nch = image_shape
+    cropped_width = ncol - sum(crop_row)
+    cropped_shape = (nrow, cropped_width, nch)
+    target_shape = (66, 200, nch)
 
-    input_shape = image_shape
+    # input_shape = image_shape
 
     model = Sequential()
 
     # cropping layer
-    # model.add(Cropping2D(cropping=(crop_row, (0, 0)), input_shape=image_shape))
+    model.add(Cropping2D(cropping=(crop_row, (0, 0)), input_shape=image_shape))
 
     # lambda layer for resizing
     # def resize_lambda(x):
@@ -33,8 +34,11 @@ def model_NVIDIA( image_shape=(160,320,3), crop_row=(80,25), drop_prob=0.5 ):
     #     return ktf.image.resize_images(x, (feed_height, feed_width))
     # model.add(Lambda(resize_lambda))
 
+    # resize layer
+    model.add(Reshape(target_shape, input_shape=cropped_shape))
+
     # lambda layer for normalization
-    model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=input_shape))
+    model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=target_shape))
 
     # change color space to HSV
     # def color_lambda(x):
@@ -43,10 +47,10 @@ def model_NVIDIA( image_shape=(160,320,3), crop_row=(80,25), drop_prob=0.5 ):
     # model.add(Lambda(color_lambda, input_shape=input_shape))
 
     # convolution layers
-    model.add(Conv2D(24, 5, strides=2, padding='valid',
+    model.add(Conv2D(24, 5, strides=2, padding='same',
                      activation='relu', kernel_initializer='he_uniform', name='conv1'))
 
-    model.add(Conv2D(36, 5, strides=2, padding='valid',
+    model.add(Conv2D(36, 5, strides=2, padding='same',
                      activation='relu', kernel_initializer='he_uniform', name='conv2'))
 
     model.add(Conv2D(48, 5, strides=2, padding='valid',
@@ -58,8 +62,8 @@ def model_NVIDIA( image_shape=(160,320,3), crop_row=(80,25), drop_prob=0.5 ):
     model.add(Conv2D(64, 3, strides=1, padding='valid',
                      activation='relu', kernel_initializer='he_uniform', name='conv5'))
 
-    # model.add(Conv2D(80, 3, strides=1, padding='valid',
-    #                  activation='relu', kernel_initializer='he_uniform', name='conv6'))
+    model.add(Conv2D(80, 3, strides=1, padding='valid',
+                     activation='relu', kernel_initializer='he_uniform', name='conv6'))
 
     # flatten
     model.add(Flatten())
