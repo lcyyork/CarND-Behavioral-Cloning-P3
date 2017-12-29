@@ -17,8 +17,9 @@ def model_NVIDIA( image_shape=(160,320,3), crop_row=(80,25), drop_prob=0.5 ):
     """
 
     nrow, ncol, nch = image_shape
-    cropped_width = ncol - sum(crop_row)
-    cropped_shape = (nrow, cropped_width, nch)
+    c_top, c_bottom = crop_row
+    if ncol - c_top - c_bottom < 66:
+        c_top -= 66 - (ncol - c_top - c_bottom )
     target_shape = (66, 200, nch)
 
     # input_shape = image_shape
@@ -33,9 +34,6 @@ def model_NVIDIA( image_shape=(160,320,3), crop_row=(80,25), drop_prob=0.5 ):
     #     from keras.backend import tf as ktf
     #     return ktf.image.resize_images(x, (feed_height, feed_width))
     # model.add(Lambda(resize_lambda))
-
-    # resize layer
-    model.add(Reshape(target_shape, input_shape=cropped_shape))
 
     # lambda layer for normalization
     model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=target_shape))
@@ -85,8 +83,7 @@ def model_NVIDIA( image_shape=(160,320,3), crop_row=(80,25), drop_prob=0.5 ):
 
 def train_model(model, data, train_indices, valid_indices,
                 learning_rate=0.001, decay_rate=0.01,
-                batch_size=32, epochs=5, batches_per_epoch=2000,
-                validation_steps=1000):
+                batch_size=32, epochs=5, batches_per_epoch=2000):
     """ Train the model.
 
     model -- the Keras model
@@ -98,7 +95,6 @@ def train_model(model, data, train_indices, valid_indices,
     batch_size        -- the size of a mini-batch
     epochs            -- the number of epochs for training
     batches_per_epoch -- number of batches to yield from generator in each epoch
-    validation_steps  -- number of batches to yield from generator
     """
 
     # Adam optimizer
@@ -109,7 +105,7 @@ def train_model(model, data, train_indices, valid_indices,
                                   batches_per_epoch, epochs,
                                   validation_data=generator(data, valid_indices,
                                                             batch_size, False),
-                                  validation_steps=validation_steps,
+                                  validation_steps=len(valid_indices),
                                   verbose=1, max_q_size=1)
     return history
 
@@ -121,7 +117,7 @@ data = mask_small_steering(data)
 nentries = len(data['steering'])
 train_indices, valid_indices = train_test_split(range(nentries), test_size=0.2)
 
-model = model_NVIDIA(image_shape=(55,320,3))
+model = model_NVIDIA()
 history = train_model(model, data, train_indices, valid_indices, epochs=3,
                       batch_size=16, batches_per_epoch=800, validation_steps=500)
 # model.save_weights('model.h5')
