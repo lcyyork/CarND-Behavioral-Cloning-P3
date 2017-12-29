@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 
 from utils import *
 
-def model_NVIDIA( image_shape=(160,320,3), crop_row=(65,25), drop_prob=0.5 ):
+def model_NVIDIA( image_shape=(160,320,3), crop_row=(80,25), drop_prob=0.5 ):
     """ Modified NVIDIA model.
 
     image_shape -- the shape of input image
@@ -23,7 +23,7 @@ def model_NVIDIA( image_shape=(160,320,3), crop_row=(65,25), drop_prob=0.5 ):
     model = Sequential()
 
     # cropping layer
-    model.add(Cropping2D(cropping=(crop_row, (0, 0)), input_shape=image_shape))
+    # model.add(Cropping2D(cropping=(crop_row, (0, 0)), input_shape=image_shape))
 
     # lambda layer for resizing
     # def resize_lambda(x):
@@ -32,7 +32,7 @@ def model_NVIDIA( image_shape=(160,320,3), crop_row=(65,25), drop_prob=0.5 ):
     # model.add(Lambda(resize_lambda))
 
     # lambda layer for normalization
-    model.add(Lambda(lambda x: x / 255.0, input_shape=input_shape))
+    # model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=input_shape))
 
     # change color space to HSV
     # def color_lambda(x):
@@ -41,10 +41,10 @@ def model_NVIDIA( image_shape=(160,320,3), crop_row=(65,25), drop_prob=0.5 ):
     # model.add(Lambda(color_lambda, input_shape=input_shape))
 
     # convolution layers
-    model.add(Conv2D(24, 5, strides=2, padding='same',
+    model.add(Conv2D(24, 5, strides=2, padding='valid',
                      activation='relu', kernel_initializer='he_uniform', name='conv1'))
 
-    model.add(Conv2D(36, 5, strides=2, padding='same',
+    model.add(Conv2D(36, 5, strides=2, padding='valid',
                      activation='relu', kernel_initializer='he_uniform', name='conv2'))
 
     model.add(Conv2D(48, 5, strides=2, padding='valid',
@@ -56,8 +56,8 @@ def model_NVIDIA( image_shape=(160,320,3), crop_row=(65,25), drop_prob=0.5 ):
     model.add(Conv2D(64, 3, strides=1, padding='valid',
                      activation='relu', kernel_initializer='he_uniform', name='conv5'))
 
-    model.add(Conv2D(80, 3, strides=1, padding='valid',
-                     activation='relu', kernel_initializer='he_uniform', name='conv6'))
+    # model.add(Conv2D(80, 3, strides=1, padding='valid',
+    #                  activation='relu', kernel_initializer='he_uniform', name='conv6'))
 
     # flatten
     model.add(Flatten())
@@ -99,11 +99,13 @@ def train_model(model, data, train_indices, valid_indices,
     model.compile(loss='mse', optimizer=Adam(lr=learning_rate, decay=decay_rate))
 
     # train
-    model.fit_generator(generator(data, train_indices, batch_size, True),
-                        batches_per_epoch, epochs,
-                        validation_data=generator(data, valid_indices, batch_size, False),
-                        validation_steps=validation_steps, verbose=1)
-    return
+    history = model.fit_generator(generator(data, train_indices, batch_size, True),
+                                  batches_per_epoch, epochs,
+                                  validation_data=generator(data, valid_indices,
+                                                            batch_size, False),
+                                  validation_steps=validation_steps,
+                                  verbose=1, max_q_size=1)
+    return history
 
 # ==> Run the model <==
 
@@ -114,11 +116,12 @@ nentries = len(data['steering'])
 train_indices, valid_indices = train_test_split(range(nentries), test_size=0.2)
 
 model = model_NVIDIA()
-train_model(model, data, train_indices, valid_indices, epochs=1,
-            batch_size=16, batches_per_epoch=8, validation_steps=16)
+history = train_model(model, data, train_indices, valid_indices, epochs=3,
+                      batch_size=16, batches_per_epoch=800, validation_steps=500)
 # model.save_weights('model.h5')
 
 print (model.summary())
+print (history.history)
 # plot_model(model, to_file='model.png')
 
 model.save('model.h5')

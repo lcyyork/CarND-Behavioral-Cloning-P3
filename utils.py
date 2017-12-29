@@ -35,7 +35,7 @@ def load_driving_csv(data_path='data'):
 
     return data
 
-def mask_small_steering(data, keep=0.25, small=0.005):
+def mask_small_steering(data, keep=0.75, small=0.001):
     """ Mask small steering angles in data. """
 
     small_mask = np.abs(data['steering']) < small
@@ -77,6 +77,21 @@ def image_path(image_path_csv, data_path='data'):
     """ Return the image path under data_path/image_path_csv. """
 
     return '/'.join([data_path, image_path_csv])
+
+def crop_row(image, upper=80, lower=-25):
+    """ Crop the rows of an image. """
+
+    return image[upper:lower]
+
+def resize_image(image, width=200, height=66):
+    """ Resize an image. """
+
+    return cv2.resize(image, (width, height), cv2.INTER_AREA)
+
+def RGB2YUV(image):
+    """ Convert an RGB image to YUV color space. """
+
+    return cv2.cvtColor(image, cv2.COLOR_RGB2YUV)
 
 def change_brightness(image, offsets=(-0.35, 0.10)):
     """ Changes the brightness of an RGB image. """
@@ -159,7 +174,11 @@ def generator(data, data_indices, batch_size, train_mode=True):
     steering_angles = []
 
     def append_image_angle(image, angle):
-        images.append(gaussian_blur(image))
+        # images.append(gaussian_blur(image))
+        image = crop_row(image)
+        # image = resize_image(image)
+        image = RGB2YUV(image)
+        images.append(image)
         steering_angles.append(angle)
 
     def default_append(i):
@@ -167,34 +186,40 @@ def generator(data, data_indices, batch_size, train_mode=True):
         append_image_angle(image, data['steering'][i])
 
     while True:
-        count = 0
-
         for i in np.random.choice(data_indices, batch_size):
             steering_angle = data['steering'][i]
 
             if train_mode:
-                if abs(steering_angle) > 0.5:
-                    for camera in ['left', 'center', 'right']:
-                        image, steering_angle = augment_image(data, i, camera)
-                        append_image_angle(image, steering_angle)
-                    count += 3
-                elif abs(steering_angle) > 0.25:
-                    if np.random.rand() < 0.5:
-                        image, steering_angle = augment_image(data, i)
-                        append_image_angle(image, steering_angle)
-                    else:
-                        default_append(i)
-                    count += 1
+                if np.random.rand() < 0.5:
+                    image, steering_angle = augment_image(data, i)
+                    append_image_angle(image, steering_angle)
                 else:
-                    if np.random.rand() < 0.75:
-                        image, steering_angle = augment_image(data, i)
-                        append_image_angle(image, steering_angle)
-                    else:
-                        default_append(i)
-                    count += 1
+                    default_append(i)
+
+                # if abs(steering_angle) > 0.5:
+                #     for camera in ['left', 'center', 'right']:
+                #         image, steering_angle = augment_image(data, i, camera)
+                #         append_image_angle(image, steering_angle)
+                #     count += 2
+                # elif abs(steering_angle) > 0.25:
+                #     if np.random.rand() < 0.5:
+                #         image, steering_angle = augment_image(data, i)
+                #         append_image_angle(image, steering_angle)
+                #     else:
+                #         default_append(i)
+                # else:
+                #     if np.random.rand() < 0.75:
+                #         image, steering_angle = augment_image(data, i)
+                #         append_image_angle(image, steering_angle)
+                #     else:
+                #         default_append(i)
+                count += 1
             else:
                 default_append(i)
                 count += 1
+
+            if count == batch_size:
+                break
 
         X = np.array(images)
         y = np.array(steering_angles)
