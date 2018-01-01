@@ -182,6 +182,7 @@ The first track has a bias on stright line and long mild left turns.
 In Fig. 4, no strong bias on left turns is observed but the data do emphasize straight lines.
 Besides masking the data set, I also augment the data by randomly flipping the images and changing the brightness of images realizing that the small inbalance between left and right turns and the few shadows on the road.
 Here is an example:
+
 <img src="images/image0.png" style="width:300px;height:200;">
 <caption><center> **Fig. 7a Image Augmentation: Orignal Image**<br> </center></caption>
 <img src="images/image_brightness.png" style="width:300px;height:200;">
@@ -229,6 +230,7 @@ It is then clear I should mask more data and sampling more small steering data i
 
 Finally, I mask 90 % of the data and set the number of batches per epoch to 500.
 Here is the result.
+!video[ final video ]( https://github.com/lcyyork/CarND-Behavioral-Cloning-P3/blob/master/video.mp4 )
 <center>
 <video width="400" height="200" src="video.mp4" type="video/mp4" controls>
 </video>
