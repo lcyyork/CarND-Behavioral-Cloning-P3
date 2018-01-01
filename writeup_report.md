@@ -230,7 +230,6 @@ It is then clear I should mask more data and sampling more small steering data i
 
 Finally, I mask 90 % of the data and set the number of batches per epoch to 500.
 Here is the result.
-!video[ final video ]( https://github.com/lcyyork/CarND-Behavioral-Cloning-P3/blob/master/video.mp4 )
 <center>
 <video width="400" height="200" src="video.mp4" type="video/mp4" controls>
 </video>
