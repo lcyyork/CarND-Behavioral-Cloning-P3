@@ -15,6 +15,7 @@ from io import BytesIO
 from keras.models import load_model
 import h5py
 from keras import __version__ as keras_version
+from utils import *
 
 sio = socketio.Server()
 app = Flask(__name__)
@@ -22,10 +23,11 @@ model = None
 prev_image_array = None
 
 
-class SimplePIController:
-    def __init__(self, Kp, Ki):
+class SimplePIDController:
+    def __init__(self, Kp, Ki, Kd):
         self.Kp = Kp
         self.Ki = Ki
+        self.Kd = Kd
         self.set_point = 0.
         self.error = 0.
         self.integral = 0.
@@ -34,17 +36,20 @@ class SimplePIController:
         self.set_point = desired
 
     def update(self, measurement):
+        # derivative error
+        dte = self.set_point - measurement + self.error
+
         # proportional error
         self.error = self.set_point - measurement
 
         # integral error
         self.integral += self.error
 
-        return self.Kp * self.error + self.Ki * self.integral
+        return self.Kp * self.error + self.Ki * self.integral + self.Kd * dte
 
 
-controller = SimplePIController(0.1, 0.002)
-set_speed = 9
+controller = SimplePIDController(0.1, 0.002, 0.0)
+set_speed = 20
 controller.set_desired(set_speed)
 
 
@@ -61,9 +66,19 @@ def telemetry(sid, data):
         imgString = data["image"]
         image = Image.open(BytesIO(base64.b64decode(imgString)))
         image_array = np.asarray(image)
+        image_array = gaussian_blur(image_array)
+        image_array = crop_row(image_array)
+        image_array = resize_image(image_array)
+        image_array = RGB2YUV(image_array)
+
         steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
 
         throttle = controller.update(float(speed))
+#       throttle -= steering_angle ** 2
+#       if throttle > 0.5:
+#           throttle = 0.5
+#       if throttle < -0.5:
+#           throttle = -0.5
 
         print(steering_angle, throttle)
         send_control(steering_angle, throttle)

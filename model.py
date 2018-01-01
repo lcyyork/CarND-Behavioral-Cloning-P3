@@ -1,4 +1,4 @@
-from keras.models import Sequential
+from keras.models import Sequential, load_model
 from keras.optimizers import Adam
 from keras.layers import Lambda, Cropping2D, Reshape, Conv2D, Dropout, Dense, Flatten
 from keras.utils import plot_model
@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 
 from utils import *
 
-def model_NVIDIA( image_shape=(160,320,3), crop_row=(80,25), drop_prob=0.5 ):
+def model_NVIDIA( image_shape=(160,320,3), crop_row=(70,25), drop_prob=0.5 ):
     """ Modified NVIDIA model.
 
     image_shape -- the shape of input image
@@ -17,17 +17,15 @@ def model_NVIDIA( image_shape=(160,320,3), crop_row=(80,25), drop_prob=0.5 ):
     """
 
     nrow, ncol, nch = image_shape
-    c_top, c_bottom = crop_row
-    if ncol - c_top - c_bottom < 66:
-        c_top -= 66 - (ncol - c_top - c_bottom )
-    target_shape = (66, 200, nch)
+    feed_width, feed_height = 200, 66
+    target_shape = (feed_height, feed_width, nch)
 
     # input_shape = image_shape
 
     model = Sequential()
 
     # cropping layer
-    model.add(Cropping2D(cropping=(crop_row, (0, 0)), input_shape=image_shape))
+    # model.add(Cropping2D(cropping=(crop_row, (0, 0)), input_shape=image_shape))
 
     # lambda layer for resizing
     # def resize_lambda(x):
@@ -81,14 +79,15 @@ def model_NVIDIA( image_shape=(160,320,3), crop_row=(80,25), drop_prob=0.5 ):
 
     return model
 
-def train_model(model, data, train_indices, valid_indices,
-                learning_rate=0.001, decay_rate=0.01,
+def train_model(model, data_train, train_indices, data_valid, valid_indices,
+                learning_rate=0.0002, decay_rate=0.01,
                 batch_size=32, epochs=5, batches_per_epoch=2000):
     """ Train the model.
 
-    model -- the Keras model
-    data -- the data map
+    model             -- the Keras model
+    data_train        -- the data map of training data
     train_indices     -- the indices for training
+    data_valid        -- the data map of validation data
     valid_indices     -- the indices for validation
     learning_rate     -- the learning_rate used in Adam optimizer
     decay_rate        -- the decay rate for learning_rate in Adam optimizer
@@ -101,9 +100,9 @@ def train_model(model, data, train_indices, valid_indices,
     model.compile(loss='mse', optimizer=Adam(lr=learning_rate, decay=decay_rate))
 
     # train
-    history = model.fit_generator(generator(data, train_indices, batch_size, True),
+    history = model.fit_generator(generator(data_train, train_indices, batch_size, True),
                                   batches_per_epoch, epochs,
-                                  validation_data=generator(data, valid_indices,
+                                  validation_data=generator(data_valid, valid_indices,
                                                             batch_size, False),
                                   validation_steps=len(valid_indices),
                                   verbose=1, max_q_size=1)
@@ -112,18 +111,44 @@ def train_model(model, data, train_indices, valid_indices,
 # ==> Run the model <==
 
 data = load_driving_csv()
-data = mask_small_steering(data)
 
 nentries = len(data['steering'])
-train_indices, valid_indices = train_test_split(range(nentries), test_size=0.2)
+train_indices, valid_indices = train_test_split(range(nentries), test_size=0.1)
 
-model = model_NVIDIA()
-history = train_model(model, data, train_indices, valid_indices, epochs=3,
-                      batch_size=16, batches_per_epoch=800, validation_steps=500)
-# model.save_weights('model.h5')
+data_train = {}
+data_valid = {}
+for name in data:
+    data_train[name] = np.array(data[name][train_indices])
+    data_valid[name] = np.array(data[name][valid_indices])
 
+steps = 5
+losses = {'loss': {}, 'val_loss': {}}
+
+for i in range(steps):
+    data_masked = mask_small_steering(data_train, 0.20)
+    ntrain = len(data_masked['steering'])
+    nvalid = len(data_valid['steering'])
+
+    try:
+        model = load_model('model{}.h5'.format(i-1))
+    except:
+        model = model_NVIDIA()
+    history = train_model(model, data_masked, range(ntrain), data_valid, range(nvalid),
+                          epochs=5, batch_size=20, batches_per_epoch=1000,
+                          learning_rate=0.001)
+
+    # save losses
+    losses['loss'][i] = history.history['loss']
+    losses['val_loss'][i] = history.history['val_loss']
+
+    # save model
+    model.save('model{}.h5'.format(i))
+    # model.save_weights('model.h5')
+
+# print model summary
 print (model.summary())
-print (history.history)
-# plot_model(model, to_file='model.png')
 
-model.save('model.h5')
+# save losses to file
+import json
+with open("loss.json", "w") as w:
+    json.dump(losses, w)
