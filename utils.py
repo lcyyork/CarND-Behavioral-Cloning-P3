@@ -187,45 +187,16 @@ def generator(data, data_indices, batch_size, train_mode=True, image_shape=(66,2
         image = read_image(image_path(data['center'][i]))
         append_image_angle(image, data['steering'][i], n)
 
-    def append_augment(prob, i, n):
-        if np.random.rand() < prob:
-            image, steering_angle = augment_image(data, i)
-            append_image_angle(image, steering_angle, n)
-        else:
-            default_append(i, n)
-
     while True:
-        n = 0
-        for i in np.random.choice(data_indices, batch_size):
-            steering_angle = data['steering'][i]
+        indices = np.random.choice(data_indices, batch_size)
+        for n in range(batch_size):
+            i = indices[n]
 
-            if train_mode:
-                # if np.random.rand() < 0.5:
-                #     image, steering_angle = augment_image(data, i, camera_corr=(0.20, 0.22))
-                #     append_image_angle(image, steering_angle, n)
-                # else:
-                #     default_append(i, n)
-
-                if abs(steering_angle) > 0.5:
-                    for camera in ['left', 'center', 'right']:
-                        image, steering_angle = augment_image(data, i, camera)
-                        append_image_angle(image, steering_angle, n)
-                        n += 1
-
-                        if n == batch_size:
-                            break
-                elif abs(steering_angle) > 0.25:
-                    append_augment(0.5, i, n)
-                    n += 1
-                else:
-                    append_augment(0.75, i, n)
-                    n += 1
-
-                if n == batch_size:
-                    break
+            if train_mode and np.random.rand() < 0.5:
+                image, steering_angle = augment_image(data, i, camera_corr=(0.20, 0.22))
+                append_image_angle(image, steering_angle, n)
             else:
                 default_append(i, n)
-                n += 1
 
         X = np.array(images)
         y = np.array(steering_angles)

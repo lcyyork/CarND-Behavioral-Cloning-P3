@@ -121,7 +121,7 @@ for name in data:
     data_train[name] = np.array(data[name][train_indices])
     data_valid[name] = np.array(data[name][valid_indices])
 
-steps = 5
+steps = 1
 losses = {'loss': {}, 'val_loss': {}}
 
 for i in range(steps):
@@ -134,7 +134,7 @@ for i in range(steps):
     except:
         model = model_NVIDIA()
     history = train_model(model, data_masked, range(ntrain), data_valid, range(nvalid),
-                          epochs=5, batch_size=20, batches_per_epoch=1000,
+                          epochs=8, batch_size=16, batches_per_epoch=2500,
                           learning_rate=0.001)
 
     # save losses
